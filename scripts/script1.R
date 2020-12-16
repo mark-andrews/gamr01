@@ -52,3 +52,98 @@ summary(M2)$adj.r.sq
 
 # null hypothesis model comparison
 anova(M3, M2)
+
+# AIC for models M2 and M3
+AIC(M2)
+AIC(M3)
+
+
+# Generate random data ----------------------------------------------------
+
+set.seed(101)
+Df <- tibble(x = seq(-2, 2, length.out = 20),
+             y = 0.5 + 1.5 * x + rnorm(length(x))
+) 
+ggplot(Df, aes(x,y)) + geom_point()
+
+M_fits <- map(seq(9), 
+              ~lm(y ~ poly(x, degree = .), data = Df))
+
+map_dbl(M_fits, AIC)
+
+M_aics <- map_dbl(M_fits, AIC)
+M_aics - min(M_aics)
+
+Df_new <- tibble(x = seq(-2, 2, length.out = 100))
+
+Df %>% add_predictions(M_fits[[1]]) %>%
+  ggplot(aes(x, y = pred)) + 
+  geom_line() + 
+  geom_point(aes(y = y))
+
+Df %>% add_predictions(M_fits[[2]]) %>%
+  ggplot(aes(x, y = pred)) + 
+  geom_line() + 
+  geom_point(aes(y = y))
+
+Df %>% add_predictions(M_fits[[3]]) %>%
+  ggplot(aes(x, y = pred)) + 
+  geom_line() + 
+  geom_point(aes(y = y))
+
+Df %>% add_predictions(M_fits[[9]]) %>%
+  ggplot(aes(x, y = pred)) + 
+  geom_line() + 
+  geom_point(aes(y = y))
+
+aic_c <- function(model){
+  K <- length(coef(model)) + 1
+  N <- nrow(model$model)
+  AIC(model) + (2*K*(K+1))/(N-K-1)
+}
+
+M_aiccs <- map_dbl(M_fits, aic_c)
+M_aiccs - min(M_aiccs)
+
+map_dbl(M_fits, ~summary(.)$r.sq)
+
+# model with categorical predictor
+M4 <- lm(mean_fix ~ poly(Time, degree = 9) * Object, data = eyefix_df_avg)
+
+eyefix_df_avg %>% 
+  add_predictions(M4) %>% 
+  ggplot(aes(x = Time, y = pred, colour = Object, group = Object)) + geom_line() +
+  geom_point(aes(y = mean_fix))
+
+
+
+# B splines ---------------------------------------------------------------
+knots <- seq(-500, 2500, by = 500)
+M5 <- lm(mean_fix ~ bs(Time, knots = knots), 
+         data = eyefix_df_avg_targ)
+
+eyefix_df_avg_targ %>% 
+  add_predictions(M5) %>% 
+  ggplot(aes(x = Time, y = pred)) + geom_line(colour = 'red') +
+  geom_point(aes(y = mean_fix))
+
+M6 <- lm(mean_fix ~ bs(Time, knots = knots) * Object, 
+         data = eyefix_df_avg)
+
+eyefix_df_avg %>% 
+  add_predictions(M6) %>% 
+  ggplot(aes(x = Time, y = pred, colour = Object, group = Object)) + 
+  geom_line() +
+  geom_point(aes(y = mean_fix))
+
+
+M7 <- lm(mean_fix ~ bs(Time, df = 10) * Object, 
+         data = eyefix_df_avg)
+
+eyefix_df_avg %>% 
+  add_predictions(M7) %>% 
+  ggplot(aes(x = Time, y = pred, colour = Object, group = Object)) + 
+  geom_line() +
+  geom_point(aes(y = mean_fix))
+
+with(eyefix_df_avg, attr(bs(Time, df = 10), 'knots'))
