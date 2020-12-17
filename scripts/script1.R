@@ -147,3 +147,40 @@ eyefix_df_avg %>%
   geom_point(aes(y = mean_fix))
 
 with(eyefix_df_avg, attr(bs(Time, df = 10), 'knots'))
+
+
+
+# Model evaluation in spline models ---------------------------------------
+
+gssvocab_df <- read_csv("https://raw.githubusercontent.com/mark-andrews/gamr01/master/data/gssvocab.csv")
+
+ggplot(gssvocab_df, aes(x = age, y = vocab)) + geom_point()
+
+M8 <- lm(vocab ~ ns(age, df = 1), data = gssvocab_df)
+
+df_seq <- seq(30)
+
+M_gss <- map(df_seq, ~lm(vocab ~ ns(age, df = .), 
+                         data = gssvocab_df))
+
+M_gss_aic <- map_dbl(M_gss, aic_c)
+
+gssvocab_df %>% 
+  add_predictions(M_gss[[5]]) %>% 
+  ggplot(aes(x = age, y = pred)) +
+  geom_line(colour = 'red') +
+  geom_point(aes(y = vocab))
+
+
+gssvocab_df %>% 
+  add_predictions(M_gss[[1]]) %>% 
+  ggplot(aes(x = age, y = pred)) +
+  geom_line(colour = 'red') +
+  geom_point(aes(y = vocab))
+
+
+gssvocab_df %>% 
+  add_predictions(M_gss[[15]]) %>% 
+  ggplot(aes(x = age, y = pred)) +
+  geom_line(colour = 'red') +
+  geom_point(aes(y = vocab))
