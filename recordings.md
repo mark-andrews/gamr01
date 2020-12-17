@@ -12,5 +12,5 @@ These are password protected, and you will have been given this password in the 
 
 * [Session 1: 12pm to 2pm](https://vimeo.com/492081815)
 * [Session 2: 3pm to 5pm](https://vimeo.com/492152576)
-* Session 3: 6pm to 8pm
+* [Session 3: 6pm to 8pm](https://vimeo.com/492236115)
 
