@@ -156,3 +156,113 @@ golf_df %>%
   add_predictions(M20, type = 'response') %>% 
   ggplot(aes(x = distance, y = pred)) + geom_line() + geom_point() +
   geom_point(aes(y = success/attempts), colour = 'red')
+
+
+
+
+# Spatial models ----------------------------------------------------------
+
+meuse_df <- read_csv("https://raw.githubusercontent.com/mark-andrews/gamr01/master/data/meuse.csv")
+
+
+M21 <- gam(copper ~ s(x, y), data = meuse_df)
+
+plot(M21)
+plot(M21, se = F)
+plot(M21, scheme = 1)
+plot(M21, scheme = 2)
+
+vis.gam(M21, view = c('x', 'y'), plot.type = 'persp', theta = 10)
+vis.gam(M21, view = c('x', 'y'), plot.type = 'contour')
+vis.gam(M21, view = c('x', 'y'), plot.type = 'contour', too.far = 0.1)
+vis.gam(M21, view = c('x', 'y'), plot.type = 'contour', nlevels = 3, too.far = 0.1)
+
+
+add_predictions(meuse_df, M21)
+
+tibble(x = 179000, y = 333000) %>% 
+  add_predictions(M21)
+
+
+M22 <- gam(copper ~ te(x, y, elev), data = meuse_df)
+plot(M22)
+
+M23 <- gam(copper ~ s(x, y) + s(elev) + ti(x, y, elev), 
+           data = meuse_df)
+plot(M23)
+
+
+# multilevel/mixed-effect gams --------------------------------------------
+
+library(lme4)
+
+ggplot(sleepstudy,
+       aes(x = Days, y = Reaction, colour = Subject)
+) + geom_point() + stat_smooth(method = 'lm', se = F) +
+  facet_wrap(~Subject)
+
+M24 <- lmer(Reaction ~ Days + (Days|Subject), data = sleepstudy)
+
+# nonlinear multilevel data set
+data_df <- read_csv("https://raw.githubusercontent.com/mark-andrews/gamr01/master/data/raneftanh.csv")
+
+ggplot(data_df, aes(x = x, y = y, colour = v)) + geom_point() + facet_wrap(~v)
+
+add_basis_functions <- function(x, k = 5){
+  bs(x, degree = k) %>%
+    as_tibble() %>% 
+    rename_all(~paste0('phi_', .)) %>%
+    mutate_all(as.numeric)
+}
+bs_df <- data_df %>% pull(y) %>% add_basis_functions(k = 5)
+data_df <- bind_cols(data_df, bs_df)
+
+# look at the basis functions
+data_df %>% 
+  dplyr::select(y, starts_with('phi')) %>% 
+  pivot_longer(cols = -y,
+               names_to = 'phi',
+               values_to = 'f') %>% 
+  ggplot(aes(x = y, y = f, colour = phi)) + geom_line()
+
+data_df
+
+lm(y ~ bs(x))
+
+data_df <- read_csv("https://raw.githubusercontent.com/mark-andrews/gamr01/master/data/raneftanh.csv")
+bs_df <- data_df %>% pull(x) %>% add_basis_functions(k = 5)
+data_df <- bind_cols(data_df, bs_df)
+
+M25 <- lmer(y ~ phi_1 + phi_2 + phi_3 + phi_4 + phi_5 + (phi_1 + phi_2 + phi_3 + phi_4 + phi_5||v), 
+            data = data_df)
+
+
+
+# Bayesian gams -----------------------------------------------------------
+
+set.seed(10101) # Omit or change this if you like
+
+N <- 25
+
+x_1 <- rnorm(N)
+x_2 <- rnorm(N)
+
+beta_0 <- 1.25
+beta_1 <- 1.75
+beta_2 <- 2.25
+
+mu <- beta_0 + beta_1 * x_1 + beta_2 * x_2
+
+y <- mu + rnorm(N, mean=0, sd=1.75)
+
+Df <- tibble(x_1, x_2, y)
+
+M26 <- lm(y ~ x_1 + x_2, data = Df)
+
+library(brms)
+
+M27 <- brm(y ~ x_1 + x_2, data = Df)
+
+
+M28 <- gam(accel ~ s(times), data = mcycle)
+M29 <- brm(accel ~ s(times), data = mcycle)
